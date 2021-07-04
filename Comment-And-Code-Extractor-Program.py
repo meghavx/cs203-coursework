@@ -1,11 +1,11 @@
 import sys
 
 # File input from the user
-# Path of a file is also accepted
+# Path of the file is also accepted
 input = sys.argv[1]
 file = open(input, "r")
 
-# Opening 2 text files to store the code and the comments
+# Opening 2 text files to store the code and the comments separately
 codefile = open("Original.txt","w")
 commentfile = open("Comments.txt","w")
 
@@ -19,7 +19,7 @@ i = 1
 for line in file:
 
     # Storing the first 2 chars (ignoring spaces) in the line
-    # to see whether it's a comment or line of code
+    # to see whether it is a comment or a line of code
     lineBeginsWith = line.strip()[:2]
 
 
@@ -41,32 +41,28 @@ for line in file:
         
         # if Case(2)
         else:
-            # if multi-line comment end symbol is encountered at the beginning
+            # if multi-line comment end symbol '*/' is encountered at the beginning
             if (line.strip() == '*/'):
                 comment_txt = str(i) + "  " + line.strip() + "\n" 
             else:
                 comment_txt = str(i) + "     " + line.strip() + "\n" 
         
-        # if multi-line comment end symbol is encountered at the end of a line
+        # if multi-line comment end symbol '*/' is encountered at the end of a line
         if (line.strip()[-2:] == '*/'):
             # Updating the flag to indicate that multi-line comment has ended
             commentInContinuation = False
 
 
-    # if single line comment is present within the same line as the code line 
-    elif ('//' in line):
-        start = line.index('//') 
-        # Storing the comment part of the line to write into the 'commentfile'
-        comment_txt = str(i) + "  " + line[start:].strip() + "\n"
-        # Storing the code part of the line to write into the 'codefile'
-        code_txt = " " + line[:start] + "\n"
-        # Writing into the 'codefile'
-        codefile.write(code_txt)
-    
+    # if the comment symbol is present within the same line as the code line 
+    elif ('//' in line or '/*' in line):
+        # if it's a single line comment symbol
+        if ('//' in line):
+            start = line.index('//') 
 
-    # if multi-line comment is present within the same line as the code line 
-    elif ('/*' in line):
-        start = line.index('/*') 
+        # if it's a multi-line comment symbol
+        elif ('/*' in line):
+            start = line.index('/*') 
+    
         # Storing the comment part of the line to write into the 'commentfile'
         comment_txt = str(i) + "  " + line[start:].strip() + "\n"
         # Storing the code part of the line to write into the 'codefile'
@@ -97,4 +93,3 @@ for line in file:
 
 # Closing the C source file
 file.close()
-
