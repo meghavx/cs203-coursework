@@ -18,14 +18,15 @@ def writeToCodeFile(line):
 # Function to write a given line into the 'commentfile'
 # Case parameter dictates in what format the comment will be stored
 def writeToCommentFile(i, line, case):
+    comment_txt = str(i).rjust(3)
     if case == 0:
-        comment_txt = str(i).center(3) + "  " + line.strip() + "\n"  
+        comment_txt += "  " + line.strip() + "\n"  
     # if continued multi-line comment line
     elif case == 1:
-        comment_txt = str(i).center(3) + "     " + line.strip() + "\n" 
+        comment_txt += "     " + line.strip() + "\n" 
     # if line contains code, store a single dot in its place
     elif case == 2:
-        comment_txt = str(i).center(3) + "  .\n"
+        comment_txt += "  .\n"
     
     commentfile.write(comment_txt)
 
