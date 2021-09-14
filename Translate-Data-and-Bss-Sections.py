@@ -3,73 +3,84 @@ import sys
 sizes = {'db' : 2, 'dw' : 4, 'dd' : 8, 'resb' : 1, 'resw' : 2, 'resd' : 4}
 
 
-def forBss(n: str, dir: str) :
+def forBss(n, dir) :
     resMem = (hex(int(n) * sizes[dir])[2:]).upper().zfill(8)
-    return '<res ' + resMem + '>\n'
+    return '<res ' + resMem + '>'
 
 
-def forDataNumbers(num: str, dir: str) :
-    isHex = False
-    if ('0x' not in num) :
-        isHex = True
-        num = hex(int(num))
-    ans = num[2:].upper().zfill(sizes[dir])
-    return ans if not isHex else ans + '\n'
+def toLittleEndian(n) :
+    return ('').join([n[i:i+2] for i in range(0, len(n), 2)])
 
 
-def forDataArrays(arr: list, dir: str) :
+def forDataNumbers(num, dir) :
+    if '0x' not in num :
+        num = hex(int(num)).upper()
+    return toLittleEndian(num[2:].zfill(sizes[dir]))
+
+
+def forDataArrays(arr, dir) :
     hexarr = ''
     for a in arr :
-        hexarr += hex(a)[2:].upper().zfill(sizes[dir])
+        hexarr += toLittleEndian(hex(a)[2:].upper().zfill(sizes[dir]))
     hexarr = '-\n'.join(hexarr[i:i + 18] for i in range(0, len(hexarr), 18))
     return hexarr
 
 
-def forDataStrings(st: str, dir: str) :
-    hexstr = ''
-    count = 0
-    for ch in st :
-        count += 1
-        hexstr += hex(ord(ch))[2:].upper()
-        if count % 9 == 0 :
-            hexstr += '-\n'
+def forDataStrings(s) :
+    tempstr = ('').join(map(lambda ch: hex(ord(ch))[2:].upper(), s))
+    hexstr = '-\n'.join(tempstr[i:i + 18] for i in range(0, len(tempstr), 18))
     return hexstr
 
 
-input = sys.argv[1]
+# Main Function
+if __name__ == '__main__':
 
-lstfile = open("p.lst", "w")
-assemblyfile = open(input, "r")
+    input = sys.argv[1]
 
-i = 1
-bssflag = dataflag = False
+    lstfile = open("p.lst", "w")
+    assemblyfile = open(input, "r")
 
-for line in assemblyfile :
-    if line.strip().startswith('section .text') :
-        break
+    i = 1
+    bssflag = False
+    dataflag = False
 
-    if line.strip().startswith('section .bss') :
-        bssflag = True
-    
-    if line.strip().startswith('section .data') :
-        dataflag = True
-
-
-    if bssflag == True :
-        tokens = line.split()
-        if ('resb' in line) or ('resw' in line) or ('resd' in line) :
-            dir = tokens[1]
-            num = tokens[2]
-            res = (str(i)).rjust(2) + ' ' + forBss(num, dir)
+    for line in assemblyfile :
+        if len(line.strip()) == 0:
+            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), ' ', line)
             lstfile.write(res)
 
 
-    if dataflag == True :
-        tokens = line.split(' ')
-        if ('db' in line) or ('dw' in line) or ('dd' in line) :
-            dir = tokens[1]
-            num = tokens[2]
-            res = (str(i)).rjust(2) + ' ' + forDataNumbers(num, dir)
+        if line.strip().startswith('section .text') :
+            break
+
+
+        if line.strip().startswith('section .bss') :
+            bssflag = True
+            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), '', line)
+            lstfile.write(res)
+        
+
+        if line.strip().startswith('section .data') :
+            dataflag = True
+            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), '', line)
             lstfile.write(res)
 
-    i += 1
+
+        if bssflag == True :
+            tokens = line.split()
+            if ('resb' in line) or ('resw' in line) or ('resd' in line) :
+                dir = tokens[1]
+                num = tokens[2]
+                res = '{0} {1:36} {2}'.format((str(i)).rjust(2), forBss(num, dir), line)
+                lstfile.write(res)
+
+
+        if dataflag == True :
+            tokens = line.split(' ')
+            if ('db' in line) or ('dw' in line) or ('dd' in line) :
+                dir = tokens[1]
+                num = tokens[2].strip()
+                res = '{0} {1:36} {2}'.format((str(i)).rjust(2), forDataNumbers(num, dir), line)
+                lstfile.write(res)
+
+        i += 1
