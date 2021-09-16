@@ -3,84 +3,141 @@ import sys
 sizes = {'db' : 2, 'dw' : 4, 'dd' : 8, 'resb' : 1, 'resw' : 2, 'resd' : 4}
 
 
-def forBss(n, dir) :
-    resMem = (hex(int(n) * sizes[dir])[2:]).upper().zfill(8)
-    return '<res ' + resMem + '>'
+def toLittleEndian(num) :
+    return ('').join([num[i:i+2] for i in range(0, len(num), 2)][::-1]) 
 
 
-def toLittleEndian(n) :
-    return ('').join([n[i:i+2] for i in range(0, len(n), 2)])
+def toHex(n, size=8) :
+    return hex(int(n))[2:].upper().zfill(size)
+    
+
+def translateBssTxt(num, dir) :
+    return toHex(int(num) * sizes[dir])
 
 
-def forDataNumbers(num, dir) :
+def translateDataNum(num, dir) :
     if '0x' not in num :
-        num = hex(int(num)).upper()
-    return toLittleEndian(num[2:].zfill(sizes[dir]))
+        num = hex(int(num))
+    return toLittleEndian(num[2:].upper().zfill(sizes[dir]))
 
 
-def forDataArrays(arr, dir) :
+def translateDataArr(arr, dir) :
     hexarr = ''
     for a in arr :
-        hexarr += toLittleEndian(hex(a)[2:].upper().zfill(sizes[dir]))
-    hexarr = '-\n'.join(hexarr[i:i + 18] for i in range(0, len(hexarr), 18))
-    return hexarr
+        hexarr += toLittleEndian(toHex(a, sizes[dir]))
+    return '-\n'.join(hexarr[i:i + 18] for i in range(0, len(hexarr), 18))
 
 
-def forDataStrings(s) :
-    tempstr = ('').join(map(lambda ch: hex(ord(ch))[2:].upper(), s))
-    hexstr = '-\n'.join(tempstr[i:i + 18] for i in range(0, len(tempstr), 18))
-    return hexstr
+def translateDataStr(strArr, dir) :
+    strPart = strArr[0]
+    restPart = list(map(lambda x: int(x), strArr[1:]))
+    s = ('').join(map(lambda ch: hex(ord(ch))[2:].upper(), strPart))
+    s += translateDataArr(restPart, dir)
+    return '-\n'.join(s[i:i + 18] for i in range(0, len(s), 18))
 
 
 # Main Function
 if __name__ == '__main__':
 
     input = sys.argv[1]
-
     lstfile = open("p.lst", "w")
     assemblyfile = open(input, "r")
 
-    i = 1
-    bssflag = False
-    dataflag = False
+    bssflag = dataflag = False
+    bssAddr = dataAddr = None
+    prevAddrB = prevAddrD = None 
 
-    for line in assemblyfile :
+
+    for lineNum, line in enumerate(assemblyfile) :
         if len(line.strip()) == 0:
-            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), ' ', line)
+            res = '{0} {1:28} {2}'.format((str(lineNum+1)).rjust(6), '', line)
             lstfile.write(res)
+            continue
 
 
         if line.strip().startswith('section .text') :
+            dataflag = bssflag = False
             break
 
 
         if line.strip().startswith('section .bss') :
             bssflag = True
-            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), '', line)
-            lstfile.write(res)
-        
-
-        if line.strip().startswith('section .data') :
-            dataflag = True
-            res = '{0} {1:32} {2}'.format((str(i)).rjust(2), '', line)
+            bssAddr = prevAddrB = 0
+            res = '{0} {1:8} {2:28} {3}'.format((str(lineNum+1)).rjust(6), '', '', line)
             lstfile.write(res)
 
 
-        if bssflag == True :
+        elif bssflag == True :
             tokens = line.split()
             if ('resb' in line) or ('resw' in line) or ('resd' in line) :
                 dir = tokens[1]
-                num = tokens[2]
-                res = '{0} {1:36} {2}'.format((str(i)).rjust(2), forBss(num, dir), line)
-                lstfile.write(res)
-
-
-        if dataflag == True :
-            tokens = line.split(' ')
-            if ('db' in line) or ('dw' in line) or ('dd' in line) :
-                dir = tokens[1]
                 num = tokens[2].strip()
-                res = '{0} {1:36} {2}'.format((str(i)).rjust(2), forDataNumbers(num, dir), line)
+                translatedPart = translateBssTxt(num, dir)
+                bssAddr += prevAddrB
+                res = '{0} {1} {2:28} {3}'.format((str(lineNum+1)).rjust(6), toHex(bssAddr), '<res ' + translatedPart + '>', line)
+                prevAddrB = int(translatedPart,16)
                 lstfile.write(res)
 
-        i += 1
+    
+        if line.strip().startswith('section .data') :
+            dataflag = True
+            dataAddr = prevAddrD = 0
+            res = '{0} {1:8} {2:28} {3}'.format((str(lineNum+1)).rjust(6), '', '', line)
+            lstfile.write(res)
+
+
+        elif dataflag == True :
+            t = line.split()
+            dir = t[1]
+
+            if dir in sizes.keys() and len(dir) == 2 :
+                if line.count('"') == 2 :
+                    strTokens = line.split(',')
+                    strTokens[0] = strTokens[0][strTokens[0].index(dir)+2:].lstrip().replace('"','')
+                    translatedPart = translateDataStr(strTokens, dir).split()
+                
+                    for ln in translatedPart :
+                        dataAddr += prevAddrD
+                        res = '{0} {1} {2:28}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), ln)
+                        
+                        if translatedPart.index(ln) == 0 :
+                            res += ' ' + line.rstrip()
+                        
+                        res += '\n'
+                        
+                        # if len(translatedPart) > 1 and translatedPart.index(ln) == len(translatedPart) - 1 :
+                        #     res += '\n'
+                       
+                        prevAddrD = len(ln.replace('-','')) / 2
+                        lstfile.write(res)
+
+                else :
+                    t = line.split(',')
+                    if len(t) == 1:
+                        t = line.split()
+                        num = t[2].strip()
+                        translatedPart = translateDataNum(num, dir)
+                        dataAddr += prevAddrD
+                        res = '{0} {1} {2:28} {3}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), translatedPart, line)
+                        
+                        prevAddrD = len(translatedPart) / 2
+                        lstfile.write(res)
+
+                    elif len(t) > 1 :
+                        t[0] = t[0][t[0].index(dir)+2:].lstrip()
+                        arrTokens = list(map(lambda x: int(x), t))
+                        translatedPart = translateDataArr(arrTokens, dir).split()
+                        
+                        for ln in translatedPart :
+                            dataAddr += prevAddrD
+                            res = '{0} {1} {2:28}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), ln)
+                           
+                            if translatedPart.index(ln) == 0 :
+                                res += ' ' + line.rstrip()
+                           
+                            if len(translatedPart) > 1 and translatedPart.index(ln) <= (len(translatedPart) - 1) :
+                                res += '\n'
+                        
+                            prevAddrD = len(ln.replace('-','')) / 2
+                            lstfile.write(res)
+                        
