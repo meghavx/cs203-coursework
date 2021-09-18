@@ -1,4 +1,4 @@
-
+from os import sched_setscheduler
 import sys
 
 # Dictionary to store the relevant size directives along with their sizes 
@@ -21,7 +21,7 @@ def translateBssTxt(num, dir) :
     if '0x' not in num:
         return toHex(int(num) * sizes[dir])
     return str(int(num[2:]) * sizes[dir]).upper().zfill(8)
-
+    
 
 def translateDataNum(num, dir) :
     """ Function that returns the hex representation of a 'number' defined in the Data section """
@@ -31,12 +31,12 @@ def translateDataNum(num, dir) :
 
 
 def divideStr(s) :
-    """ Function to divide a given string into chunks of max 9 bytes each """
+    """ Utility function to divide a given string into chunks of max 9 bytes each """
     return '-\n'.join(s[i:i+18] for i in range(0, len(s), 18))
 
 
-def translateStrToHex(s) :
-    """ Function to translate a given string into hex format """
+def strToHex(s) :
+    """ Utility function to translate a given string into hex format """
     return ('').join(map(lambda ch: hex(ord(ch))[2:].upper(), s))
 
 
@@ -45,22 +45,22 @@ def translateDataNumArray(arr, dir) :
     hexarr = ''
     for a in arr :
         hexarr += toLittleEndian(toHex(a, sizes[dir]))
-    return divideStr(hexarr)
+    return hexarr
 
 
 def translateDataStr(strArr, dir) :
     """ Function that returns the hex representation of a 'string' defined in the Data section """
     restPart = list(map(lambda x: int(x), strArr[1:]))
-    s = translateStrToHex(strArr[0]) + translateDataNumArray(restPart, dir)
-    return divideStr(s)
+    s = strToHex(strArr[0]) + translateDataNumArray(restPart, dir)
+    return s
 
 
 def translateDataStrArray(arr, dir) :
     """ Function that returns the hex representation of an 'string array' defined in the Data section """
     hexstr = ''
     for a in arr:
-        hexstr += translateStrToHex(a).ljust(sizes[dir]*2, '0')
-    return divideStr(hexstr)
+        hexstr += strToHex(a).ljust(sizes[dir]*2, '0')
+    return hexstr
 
 
 # Main Function
@@ -108,13 +108,24 @@ if __name__ == '__main__':
             lstfile.write(res)
 
 
+
+
+# --------------------------------------- B S S  S E C T I O N -----------------------------------------
+    
+    
+
+
         # If Bss section is already TRUE, perform translation of the current line accordingly
         elif bssflag == True :
+            translatedPart = '0'.zfill(8)
             tokens = line.split()
+
             if ('resb' in line) or ('resw' in line) or ('resd' in line) :
                 dir = tokens[1]
                 num = tokens[2].strip()
-                translatedPart = translateBssTxt(num, dir)
+                if num.isdigit() or (num.startswith('0x') and num.strip()[2:].isdigit()) :
+                    translatedPart = translateBssTxt(num, dir)
+                
                 bssAddr += prevAddrB
                 res = '{0} {1} {2:28} {3}'.format((str(lineNum+1)).rjust(6), toHex(bssAddr), '<res ' + translatedPart + '>', line)
                 prevAddrB = int(translatedPart,16)
@@ -129,12 +140,19 @@ if __name__ == '__main__':
             lstfile.write(res)
 
 
+
+
+# -------------------------------------- D A T A  S E C T I O N ------------------------------------------
+
+
+
+
         # If Data section is already TRUE, perform translation of the current line accordingly
         elif dataflag == True :
             t = line.split()
             dir = t[1]
 
-            # If the directive found is one present in the 'sizes' doctionary, we proceed with this if block
+            # If the directive found is present in the 'sizes' dictionary, we proceed with this if block
             if dir in sizes.keys() and len(dir) == 2 :
 
 
@@ -142,7 +160,11 @@ if __name__ == '__main__':
                 if line.count('"') == 2 :
                     strTokens = line.split(',')
                     strTokens[0] = strTokens[0][strTokens[0].index(dir)+2:].lstrip().replace('"','')
-                    translatedPart = translateDataStr(strTokens, dir).split()               
+                    translatedPart = translateDataStr(strTokens, dir)  
+                    print(len(translatedPart))
+
+                    translatedPart = divideStr(translatedPart).split()
+
                     for chunk in translatedPart :
                         dataAddr += prevAddrD
                         res = '{0} {1} {2:28}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), chunk)                        
@@ -158,8 +180,11 @@ if __name__ == '__main__':
                     strTokens = line.split(',')
                     strTokens[0] = strTokens[0][strTokens[0].index(dir)+2:]
                     strTokens = list(map(lambda s: s.lstrip().replace('"','').replace("\n",''), strTokens))
-                    translatedPart = translateDataStrArray(strTokens, dir).split()
-                    print(translatedPart)
+                    translatedPart = translateDataStrArray(strTokens, dir)
+                    print(len(translatedPart))
+
+                    translatedPart = divideStr(translatedPart).split()
+                    
                     for chunk in translatedPart :
                         dataAddr += prevAddrD
                         res = '{0} {1} {2:28}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), chunk)
@@ -177,7 +202,8 @@ if __name__ == '__main__':
                     if len(t) == 1:
                         t = line.split()
                         num = t[2].strip()
-                        translatedPart = translateDataNum(num, dir)
+                        translatedPart = (translateDataNum(num, dir))
+
                         dataAddr += prevAddrD
                         res = '{0} {1} {2:28} {3}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), translatedPart, line)
                         prevAddrD = len(translatedPart) / 2
@@ -188,7 +214,9 @@ if __name__ == '__main__':
                     elif len(t) > 1 :
                         t[0] = t[0][t[0].index(dir)+2:].lstrip()
                         arrTokens = list(map(lambda x: int(x), t))
-                        translatedPart = translateDataNumArray(arrTokens, dir).split()
+                        translatedPart = translateDataNumArray(arrTokens, dir)
+                        translatedPart = divideStr(translatedPart).split()
+
                         for chunk in translatedPart :
                             dataAddr += prevAddrD
                             res = '{0} {1} {2:28}'.format((str(lineNum+1)).rjust(6), toHex(dataAddr), chunk)
