@@ -16,9 +16,11 @@ def toHex(n, size=8) :
     
 
 def translateBssTxt(num, dir) :
-    """ Function that returns the hex representation of the memory to be reserved in the Bss section
-        according to the given size"""
-    return toHex(int(num) * sizes[dir])
+    """ Function that returns the hex representation of the memory to be 
+        reserved in the Bss section according to the given size """
+    if '0x' not in num:
+        return toHex(int(num) * sizes[dir])
+    return str(int(num[2:]) * sizes[dir]).upper().zfill(8)
 
 
 def translateDataNum(num, dir) :
