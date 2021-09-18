@@ -32,3 +32,5 @@ main:
 	add dword[a],10
 	add word[ecx],10
 	add word[a],10
+	
+	
