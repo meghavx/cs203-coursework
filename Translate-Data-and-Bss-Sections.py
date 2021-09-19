@@ -1,4 +1,4 @@
-from os import sched_setscheduler
+
 import sys
 
 # Dictionary to store the relevant size directives along with their sizes 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
 
 
-# --------------------------------------- B S S  S E C T I O N -----------------------------------------
+# -------------------------------------------------------- B S S  S E C T I O N ---------------------------------------------------------- #
     
     
 
@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
 
 
-# -------------------------------------- D A T A  S E C T I O N ------------------------------------------
+# ------------------------------------------------------ D A T A  S E C T I O N ---------------------------------------------------------- #
 
 
 
@@ -159,9 +159,10 @@ if __name__ == '__main__':
                 # If the line contains a <<<< single string >>>>, we do the translation accordingly
                 if line.count('"') == 2 :
                     strTokens = line.split(',')
+                    print(strTokens[0][:strTokens[0].index(dir)].lstrip(),end=" ")
                     strTokens[0] = strTokens[0][strTokens[0].index(dir)+2:].lstrip().replace('"','')
                     translatedPart = translateDataStr(strTokens, dir)  
-                    print(len(translatedPart))
+                    print(int(len(translatedPart)/2))
 
                     translatedPart = divideStr(translatedPart).split()
 
@@ -178,10 +179,11 @@ if __name__ == '__main__':
                 # If the line contains an <<<< array of strings >>>>
                 elif line.count('"') > 2 :
                     strTokens = line.split(',')
+                    print(strTokens[0][:strTokens[0].index(dir)].lstrip(),end=" ")
                     strTokens[0] = strTokens[0][strTokens[0].index(dir)+2:]
                     strTokens = list(map(lambda s: s.lstrip().replace('"','').replace("\n",''), strTokens))
                     translatedPart = translateDataStrArray(strTokens, dir)
-                    print(len(translatedPart))
+                    print(int(len(translatedPart)/2))
 
                     translatedPart = divideStr(translatedPart).split()
                     
