@@ -6,7 +6,7 @@ section .data
 	
 	msg1 db "Enter 3 values",10,0
 	msg2 db "%d%d%d",0
-	msg3 db "0123456789abcdefghijklmNOPQRSTUVWXYZ",0
+	msg3 db '0123456789abcdefghijklmNOPQRSTUVWXYZ', 0
 	
 	len1 equ $-msg1
 	len2 equ $-msg2
