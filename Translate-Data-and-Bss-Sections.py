@@ -1,6 +1,5 @@
 import sys
 
-
 # Dictionary to store the relevant size directives along with their sizes 
 sizes = {'db' : 2, 'dw' : 4, 'dd' : 8, 'resb' : 1, 'resw' : 2, 'resd' : 4}
 
@@ -20,7 +19,7 @@ lstfile = open("p.lst", "w")
 
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> MAIN TRANSLATION FUNCTIONS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> MAIN TRANSLATION FUNCTIONS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
 
 
 def translateDataSection(i, ln) :
@@ -32,25 +31,22 @@ def translateDataSection(i, ln) :
     if dir in sizes.keys() and len(dir) == 2 :
         quote = "'" if ln[ln.index(dir)+2:].lstrip()[0] == '\'' else '"'
         
-        # If it is a SINGLE STRING
-        if ln.count(quote) == 2 :
-            translateStrArray(i, ln, dir, quote)
-
-        # If it is a STRING ARRAY
-        elif ln.count(quote) > 2 :
+        if ln.count(quote) == 2 :                       # If it is a SINGLE STRING
             translateStr(i, ln, dir, quote)
+
+
+        elif ln.count(quote) > 2 :                      # If it is a STRING ARRAY
+            translateStrArray(i, ln, dir, quote)
             
 
-        # If line doesn't contain a string value, it must be either a single number or an array of numbers
+        # If the line doesn't contain a string value, it must either be a single number or an array of numbers
         else :
             t = ln.split(',')
 
-            # If it is a SINGLE NUMBER
-            if len(t) == 1:
+            if len(t) == 1:                             # If it is a SINGLE NUMBER
                 translateNum(i, ln, t, dir)
 
-            # If if is an NUMBER ARRAY
-            elif len(t) > 1 :
+            elif len(t) > 1 :                           # If if is an NUMBER ARRAY
                 translateNumArray(i, ln, t, dir)
         
         
@@ -92,18 +88,18 @@ def translateEmptyLine(i, ln) :
     return '{0} {1:28} {2}'.format((str(i+1)).rjust(6), '', ln)
 
 
-def translateLabelLine(i, ln) :
+def writeLabelLine(i, ln) :
     return '{0} {1:8} {2:28} {3}'.format((str(i+1)).rjust(6), '', '', ln)
 
 
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> UTILITY FUNCTIONS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> UTILITY FUNCTIONS <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
 
 
 
 
-def translateStr(i, ln, dir, quote) :
+def translateStrArray(i, ln, dir, quote) :
     global currDataAddr, prevDataAddr, lstfile
     strTokens = ln.split(',')
             
@@ -135,7 +131,7 @@ def translateStr(i, ln, dir, quote) :
         lstfile.write(res)
 
 
-def translateStrArray(i, ln, dir, quote) :
+def translateStr(i, ln, dir, quote) :
     global currDataAddr, prevDataAddr, lstfile
     strTokens = ln.split(',')
 
@@ -172,8 +168,8 @@ def translateNum(i, ln, tokens, dir) :
     num = tokens[2].strip()
 
     translation = numToHex(num, dir)
-    addr = toHex(currDataAddr)
     currDataAddr += prevDataAddr
+    addr = toHex(currDataAddr)
     prevDataAddr = len(translation) / 2
     lnNum = (str(i+1)).rjust(6)
 
@@ -266,12 +262,14 @@ def strToHex(s) :
 
 
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
 
 
 
 
-# Main Function
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-# MAIN FUNCTION #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+
 if __name__ == '__main__':
     input = sys.argv[1]                     # Read input file name
     assemblyfile = open(input, "r")         # Open the file and create a file object to work with it
@@ -302,8 +300,7 @@ if __name__ == '__main__':
         if line.strip().startswith('section .data') :
             dataflag = True; bssflag = False
             currDataAddr = prevDataAddr = 0
-            translation = translateLabelLine(lineNum, line)
-            lstfile.write(translation)
+            lstfile.write(writeLabelLine(lineNum, line))
 
 
         # If Data section is already TRUE, perform translation of the current line accordingly
@@ -320,7 +317,7 @@ if __name__ == '__main__':
             computeVarLengths()
             dataflag = False
             currBssAddr = prevBssAddr = 0
-            translation = translateLabelLine(lineNum, line)
+            translation = writeLabelLine(lineNum, line)
             lstfile.write(translation)
 
         
@@ -333,9 +330,5 @@ if __name__ == '__main__':
         # -------------------------------------------------------------------------------------------------------------------- #
 
 
-
-
     assemblyfile.close()                 # Close the assembly file
                           
-
-
